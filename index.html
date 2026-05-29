@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meu Jogo de Xadrez com Níveis de IA ♟️</title>
+    <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+</head>
+<body style="background-color: #1e1e1e; color: #ffffff; font-family: sans-serif;">
+
+<header style="text-align: center; margin-top: 20px;">
+    <h1>Arena de Xadrez</h1>
+    <p>Escolha seu modo de jogo!</p>
+</header>
+
+<main style="text-align: center; margin-bottom: 20px;">
+    <div style="margin-bottom: 20px;">
+        <label for="modo-jogo" style="font-weight: bold; margin-right: 10px;">Modo de Jogo: </label>
+        <select id="modo-jogo" style="padding: 8px 12px; font-size: 16px; border-radius: 5px; background-color: #333; color: white; border: 1px solid #555; cursor: pointer;">
+            <option value="amigo">Jogar com Amigo</option>
+            <option value="computador">Jogar contra Computador</option>
+        </select>
+    </div>
+
+    <div id="nivel-container" style="margin-bottom: 20px;">
+        <label for="nivel-elo" style="font-weight: bold; margin-right: 10px;">Dificuldade da IA: </label>
+        <select id="nivel-elo" style="padding: 8px 12px; font-size: 16px; border-radius: 5px; background-color: #333; color: white; border: 1px solid #555; cursor: pointer;">
+            <option value="200">Elo 200 (Muito Fácil - Aleatório)</option>
+            <option value="600">Elo 600 (Fácil - Captura Peças)</option>
+            <option value="1200">Elo 1200 (Médio - Estratégia Básica)</option>
+        </select>
+    </div>
+
+    <div id="meu-tabuleiro" style="width: 400px; margin: 0 auto;"></div>
+</main>
+
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+
+<script>
+    var jogo = new Chess();
+    var tabuleiro = null;
+    var valoresPecas = { p: 10, n: 30, b: 30, r: 50, q: 90, k: 900 };
+
+    // FUNÇÃO DA IA: Executa a jogada baseada no nível selecionado
+    function fazerJogadaDoComputador() {
+        var jogadasPossiveis = jogo.moves({ verbose: true }); 
+        if (jogadasPossiveis.length === 0) return;
+
+        var eloSelecionado = document.getElementById('nivel-elo').value;
+        var jogadaEscolhida = null;
+
+        if (eloSelecionado === "200") {
+            var indiceAleatorio = Math.floor(Math.random() * jogadasPossiveis.length);
+            jogadaEscolhida = jogadasPossiveis[indiceAleatorio];
+        } else {
+            var melhorPontuacao = -1;
+            var melhoresJogadas = [];
+            for (var i = 0; i < jogadasPossiveis.length; i++) {
+                var jogada = jogadasPossiveis[i];
+                var pontuacao = 0;
+                if (jogada.captured) pontuacao = valoresPecas[jogada.captured];
+
+                if (pontuacao > melhorPontuacao) {
+                    melhorPontuacao = pontuacao;
+                    melhoresJogadas = [jogada];
+                } else if (pontuacao === melhorPontuacao) {
+                    melhoresJogadas.push(jogada);
+                }
+            }
+            var indice = Math.floor(Math.random() * melhoresJogadas.length);
+            jogadaEscolhida = melhoresJogadas[indice];
+        }
+
+        jogo.move(jogadaEscolhida);
+        tabuleiro.position(jogo.fen());
+    }
+
+    // Monitora o movimento das peças na tela
+    function aoArrastarPeca(origem, destino, peca, novaPosicao, velhaPosicao, orientacao) {
+        var modo = document.getElementById('modo-jogo').value;
+
+        if (modo === 'computador') {
+            // Impede o jogador de arrastar as peças pretas (computador)
+            if (peca.search(/^b/) !== -1) return 'snapback';
+        }
+
+        var movimento = jogo.move({
+            from: origem,
+            to: destino,
+            promotion: 'q'
+        });
+
+        if (movimento === null) return 'snapback';
+
+        if (modo === 'computador') {
+            window.setTimeout(fazerJogadaDoComputador, 250);
+        }
+    }
+
+    // Inicialização do tabuleiro visual
+    var configuracao = {
+        draggable: true,
+        position: 'start',
+        onDrop: aoArrastarPeca,
+        pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
+    };
+
+    tabuleiro = Chessboard('meu-tabuleiro', configuracao);
+
+    // Mostra/oculta seleção de nível da IA dependendo do modo
+    document.getElementById('modo-jogo').addEventListener('change', function() {
+        var nivelContainer = document.getElementById('nivel-container');
+        if (this.value === 'amigo') {
+            nivelContainer.style.display = 'none';
+        } else {
+            nivelContainer.style.display = 'block';
+        }
+        jogo.reset();
+        tabuleiro.start();
+    });
+</script>
+</body>
+</html>
